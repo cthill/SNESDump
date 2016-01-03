@@ -27,15 +27,10 @@ def main():
     num_ports = 0
     available_ports = []
     for port in ports:
-        try:
-            s = serial.Serial(port, baud)
-            s.close()
-            available_ports.append(port)
-            print " " + str(num_ports) + " - " + port
-            num_ports += 1
-        except (OSError, serial.SerialException):
-            pass
-
+        available_ports.append(port)
+        print " " + str(num_ports) + " - " + port
+        num_ports += 1
+        
     #ask the user to select a serial port
     def get_port():
         try:
