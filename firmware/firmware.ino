@@ -104,6 +104,15 @@ void loop() {
       break;
       case ROMRead:
       {
+        //ATMEGA328 only has 2k SRAM. Do not use buffpow values > 10 (1024 bytes)
+        byte buffpow = Serial.read();
+        if (buffpow > 10) {
+          buffpow = 10;
+        }
+        int buffsize = pow(2, buffpow);
+        byte buff [buffsize];
+        int bytesRead = 0;
+        
         //Same for both high and low rom carts
         readHeader();
         Serial.write(romSizeCode);
@@ -117,13 +126,19 @@ void loop() {
           unsigned int a = readOffset;
           while(true) {
             address(b, a);
-            Serial.write(cartRead());
+            buff[bytesRead] = cartRead();
+            bytesRead++;
+            if (bytesRead == buffsize) {
+              bytesRead = 0;
+              Serial.write(buff, buffsize);
+            }
             if (a == 0xFFFF) {
               break;
             }
             a++;
           }
         }
+        Serial.write(buff, buffsize); //flush the buffer
       }
       break;
       
@@ -201,11 +216,36 @@ void loop() {
 }
 
 void address(byte bank, unsigned int addr) {
-  digitalWrite(AddressSerialClockPin, LOW); 
-  shiftOut(AddressSerialOutPin, AddressRegisterClockPin, MSBFIRST, bank);
-  shiftOut(AddressSerialOutPin, AddressRegisterClockPin, MSBFIRST, addr >> 8);
-  shiftOut(AddressSerialOutPin, AddressRegisterClockPin, MSBFIRST, addr);
-  digitalWrite(AddressSerialClockPin, HIGH);
+  //digitalWrite(AddressSerialClockPin, LOW); 
+  PORTC &= ~(1 << 3); //Set Pin A3 (AddressSerialClockPin) low
+
+  //shiftOut(AddressSerialOutPin, AddressRegisterClockPin, MSBFIRST, bank);
+  for (int i = 7; i >= 0; i--) {
+    if (((bank >> i) & 0x01) > 0) {
+      PORTC |= (1 << 1);  
+    } else {
+      PORTC &= ~(1 << 1);
+    }
+     
+    PORTC |= (1 << 4); //a4 (AddressRegisterClockPin) high
+    PORTC &= ~(1 << 4);//a4 (AddressRegisterClockPin) low
+  }
+  
+  //shiftOut(AddressSerialOutPin, AddressRegisterClockPin, MSBFIRST, addr >> 8);
+  //shiftOut(AddressSerialOutPin, AddressRegisterClockPin, MSBFIRST, addr);
+  for (int i = 15; i >= 0; i--) {
+    if (((addr >> i) & 0x01) > 0) {
+      PORTC |= (1 << 1);  
+    } else {
+      PORTC &= ~(1 << 1);
+    }
+     
+    PORTC |= (1 << 4); //a4 (AddressRegisterClockPin) high
+    PORTC &= ~(1 << 4);//a4 (AddressRegisterClockPin) low
+  }
+  
+  //digitalWrite(AddressSerialClockPin, HIGH); 
+  PORTC |= (1 << 3); //Pin A3 (AddressSerialClockPin) high
 }
 
 byte cartRead(){

@@ -30,7 +30,7 @@ def main():
         available_ports.append(port)
         print " " + str(num_ports) + " - " + port
         num_ports += 1
-        
+
     #ask the user to select a serial port
     def get_port():
         try:
@@ -74,6 +74,7 @@ def main():
             output_file = open(file_name, "wb")
 
             port.write(struct.pack("B", 1)); #send the dump rom command to the arduino
+            port.write(struct.pack("B", 10)); #send buffer size to arduino (2^10 = 1024 bytes)
             rom_size = (1 << ord(port.read())) * 1024 #(2 to the power of port.read()) * 1024
             bytes_read = 0;
 
