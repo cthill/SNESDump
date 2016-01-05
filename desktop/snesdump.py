@@ -9,7 +9,7 @@ import time
 import thread
 
 port = None
-baud = 1000000 #230400
+baud = 1000000
 
 def main():
     print "SNESDump v1"
@@ -51,6 +51,9 @@ def main():
     except (OSError, serial.SerialException):
         raise OSError("Could not open serial port")
 
+    # wait for device to signal it is ready
+    port.read(1)
+
     #print the options to the screen
     def print_options():
         print " i - Cart Info\n d - Dump ROM\n s - Dump SRAM\n w - Write SRAM\n h - Show this screen\n q - Quit"
@@ -75,7 +78,6 @@ def main():
             output_file = open(file_name, "wb")
 
             port.write(struct.pack("B", 1)); #send the dump rom command to the arduino
-            port.write(struct.pack("B", 10)); #send buffer size to arduino (2^10 = 1024 bytes)
             rom_size = (1 << ord(port.read())) * 1024 #(2 to the power of port.read()) * 1024
             bytes_read = 0;
 
@@ -91,11 +93,14 @@ def main():
                 s.enter(0, 1, doPrint, (s, 0))
                 s.run()
 
-            thread.start_new_thread(printDR, ())
+            #thread.start_new_thread(printDR, ())
 
             while rom_size > bytes_read:
-                output_file.write(port.read())
-                bytes_read += 1
+                bytes_waiting = port.inWaiting()
+                output_file.write(port.read(bytes_waiting))
+                bytes_read += bytes_waiting
+                sys.stdout.write("\r Dumping ROM {0:,}/{1:,} bytes".format(bytes_read, rom_size))
+                sys.stdout.flush()
 
             output_file.close()
             print "\n Done."
