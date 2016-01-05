@@ -10,7 +10,6 @@ const int AddressRegisterClockPin = A4; //clock
 const int AddressSerialOutPin = A1; //output
 const int AddressSerialClockPin = A3; //latch
 
-
 const int snesCartPin = 10; //Cart pin 49 - aka /CS, /ROMSEL, /Cart - Goes low when reading ROM
 const int snesWritePin = 11; //Cart pin 54 - aka /WR - Address bus A write strobe.
 const int snesReadPin = 12; //Cart pin 23 - aka /RD - Address bus A read strobe.
@@ -253,11 +252,11 @@ byte cartRead(){
   //Digital pins 8 and 9 (PINB) are connected to data lines 0 and 1 respectively
   //This line of code takes the data from pins 2-7 and from 8&9 and combines them into one byte.
   //The resulting bye looks like this: (pin7 pin6 pin5 pin4 pin3 pin2 pin9 pin8)
-  byte out = (PIND & ~0x03) | (PINB & 0x03);
-  return out;
+  return (PIND & ~0x03) | (PINB & 0x03);
 }
 
 void cartWrite(byte data) {
+  
   digitalWrite(8, bitRead(data, 0));
   digitalWrite(9, bitRead(data, 1));
   for (int i = 2; i < 8; i++) {

@@ -1,11 +1,12 @@
 import os
 import sys
 import glob
+import sched
 import serial
 import signal
 import struct
-
 import time
+import thread
 
 port = None
 baud = 1000000 #230400
@@ -78,11 +79,23 @@ def main():
             rom_size = (1 << ord(port.read())) * 1024 #(2 to the power of port.read()) * 1024
             bytes_read = 0;
 
+            def printDR():
+                s = sched.scheduler(time.time, time.sleep)
+                def doPrint(sc, last_bytes_read):
+                    diff = bytes_read - last_bytes_read
+                    last_bytes_read = bytes_read
+                    sys.stdout.write("\r Dumping ROM {0:,}/{1:,} bytes  {2:,} bytes/sec".format(bytes_read, rom_size, diff))
+                    sys.stdout.flush()
+                    sc.enter(1, 1, doPrint, (sc, last_bytes_read))
+                # do your stuff
+                s.enter(0, 1, doPrint, (s, 0))
+                s.run()
+
+            thread.start_new_thread(printDR, ())
+
             while rom_size > bytes_read:
                 output_file.write(port.read())
                 bytes_read += 1
-                sys.stdout.write("\r Dumping ROM {0}/{1} bytes".format(bytes_read, rom_size))
-                sys.stdout.flush()
 
             output_file.close()
             print "\n Done."
