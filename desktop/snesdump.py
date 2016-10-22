@@ -9,18 +9,16 @@ import time
 import thread
 
 port = None
-baud = 1000000
+baud = 2000000
 
 def main():
-    print "SNESDump v1"
-
     #get enviroment specific list of serial ports
     if sys.platform.startswith("win"):
         ports = ["COM" + str(i + 1) for i in range(256)]
     elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
-        ports = glob.glob("/dev/tty[A-Za-z]*")
+        ports = glob.glob("/dev/ttyUSB*")
     elif sys.platform.startswith("darwin"):
-        ports = glob.glob("/dev/tty.*")
+        ports = glob.glob("/dev/tty*")
     else:
         raise EnvironmentError("Unsupported platform")
 
@@ -51,7 +49,7 @@ def main():
     except (OSError, serial.SerialException):
         raise OSError("Could not open serial port")
 
-    # wait for device to signal it is ready
+    # wait for device to signal it is ready.
     port.read(1)
 
     #print the options to the screen
@@ -73,6 +71,31 @@ def main():
             print "", (1 << ord(header[24])), "KB SRAM"
             print "", "LoROM" if (ord(header[22]) & 1) == 0 else "HiROM"
 
+        elif action == "c":
+            #port.write(struct.pack("B", 4)); #send the chunk rom command to the arduino
+            #port.write(struct.pack("B", 0)); # read chunk from bank 0
+            #port.write(struct.pack("B", 255)); # upper byte of address
+            #port.write(struct.pack("B", 192)); # lower byte of address
+            port.write(struct.pack("B", 0x04)); #send the chunk rom command to the arduino
+            port.write(struct.pack("B", 0x00)); # read chunk from bank 0
+            port.write(struct.pack("B", 0xff)); # upper byte of address
+            port.write(struct.pack("B", 0xC0)); # lower byte of address
+
+            print port.read().encode('hex')
+            print port.read().encode('hex')
+            print port.read().encode('hex')
+            print "---"
+            bytes_read = 0;
+
+            outstr = ""
+            while 64 > bytes_read:
+                mbyte = port.read()
+                print (mbyte.encode('hex'))
+                bytes_read += 1
+                sys.stdout.flush()
+
+            print "\n Done."
+
         elif action == "d":
             file_name = raw_input("Please enter an output filename: ")
             output_file = open(file_name, "wb")
@@ -85,9 +108,12 @@ def main():
                 s = sched.scheduler(time.time, time.sleep)
                 def doPrint(sc, last_bytes_read):
                     diff = bytes_read - last_bytes_read
+                    if diff == 0:
+                        return
                     last_bytes_read = bytes_read
                     sys.stdout.write("\r Dumping ROM {0:,}/{1:,} bytes  {2:,} bytes/sec".format(bytes_read, rom_size, diff))
                     sys.stdout.flush()
+
                     sc.enter(1, 1, doPrint, (sc, last_bytes_read))
                 # do your stuff
                 s.enter(0, 1, doPrint, (s, 0))
