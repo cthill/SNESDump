@@ -124,7 +124,6 @@ def main():
 
             header = get_header(port)
             hirom = (header[21] & 1)
-            read_offset = 0x0 if hirom else 0x8000
             sram_size = (1 << header[24]) * 1024
 
             print_cart_info(header)
@@ -132,13 +131,13 @@ def main():
             # cart select is high for hirom carts, low for lorom carts when doing sram reads
             set_ctrl_lines(port, False, True, hirom, True)
 
-            # compute bank and addresses to read from
-            bank = 0b00100000
-            start_addr = read_offset
+            # compute bank and addresses to write to
             if hirom:
-                start_addr |= 0b0110000000000000
+                bank = 0x20
+                start_addr = 0x6000
             else:
-                start_addr |= 0b01010000
+                bank = 0x30
+                start_addr = 0x8000
             end_addr = start_addr + sram_size - 1
 
             # send read section command
@@ -178,7 +177,6 @@ def main():
 
             header = get_header(port)
             hirom = (header[21] & 1)
-            read_offset = 0x0 if hirom else 0x8000
             sram_size = (1 << header[24]) * 1024
 
             print_cart_info(header)
@@ -192,12 +190,12 @@ def main():
             set_ctrl_lines(port, True, False, hirom, True)
 
             # compute bank and addresses to write to
-            bank = 0b00100000
-            start_addr = read_offset
             if hirom:
-                start_addr |= 0b0110000000000000
+                bank = 0x20
+                start_addr = 0x6000
             else:
-                start_addr |= 0b01010000
+                bank = 0x30
+                start_addr = 0x8000
             end_addr = start_addr + sram_size - 1
 
             # send read section command
