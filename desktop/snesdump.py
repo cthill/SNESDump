@@ -11,6 +11,19 @@ import thread
 port = None
 baud = 2000000
 
+commands = {
+    'CTRL': chr(0),
+    'READSECTION': chr(1),
+    'WRITESECTION': chr(2)
+}
+
+countries = [
+    'Japan (NTSC)','USA (NTSC)','Europe, Oceania, Asia (PAL)','Sweden (PAL)',
+    'Finland (PAL)','Denmark (PAL)','France (PAL)','Holland (PAL)',
+    'Spain (PAL)','Germany, Austria, Switz (PAL)','Italy (PAL)',
+    'Hong Kong, China (PAL)','Indonesia (PAL)','Korea (PAL)'
+]
+
 def main():
     #get enviroment specific list of serial ports
     if sys.platform.startswith("win"):
@@ -61,87 +74,89 @@ def main():
     quit = False
     while not quit:
         action = raw_input("Please select an action: ").lower()
-
         if action == "i":
-            #send the info command to the arduino
-            port.write(struct.pack("B", 0));
-            header = port.read(64)
-            print "", header[:21]
-            print "", (1 << ord(header[23])), "KB ROM"
-            print "", (1 << ord(header[24])), "KB SRAM"
-            print "", "LoROM" if (ord(header[22]) & 1) == 0 else "HiROM"
-
-        elif action == "c":
-            #port.write(struct.pack("B", 4)); #send the chunk rom command to the arduino
-            #port.write(struct.pack("B", 0)); # read chunk from bank 0
-            #port.write(struct.pack("B", 255)); # upper byte of address
-            #port.write(struct.pack("B", 192)); # lower byte of address
-            port.write(struct.pack("B", 0x04)); #send the chunk rom command to the arduino
-            port.write(struct.pack("B", 0x00)); # read chunk from bank 0
-            port.write(struct.pack("B", 0xff)); # upper byte of address
-            port.write(struct.pack("B", 0xC0)); # lower byte of address
-
-            print port.read().encode('hex')
-            print port.read().encode('hex')
-            print port.read().encode('hex')
-            print "---"
-            bytes_read = 0;
-
-            outstr = ""
-            while 64 > bytes_read:
-                mbyte = port.read()
-                print (mbyte.encode('hex'))
-                bytes_read += 1
-                sys.stdout.flush()
-
-            print "\n Done."
+            print_cart_info(get_header(port))
 
         elif action == "d":
             file_name = raw_input("Please enter an output filename: ")
             output_file = open(file_name, "wb")
 
-            port.write(struct.pack("B", 1)); #send the dump rom command to the arduino
-            rom_size = (1 << ord(port.read())) * 1024 #(2 to the power of port.read()) * 1024
-            bytes_read = 0;
+            header = get_header(port)
+            hirom = (header[21] & 1)
+            # lorom carts are read from 0x8000 to 0xffff
+            read_offset = 0x0 if hirom else 0x8000
+            # lorom banks are 0x8000 in size
+            bank_size = 0x10000 - read_offset
+            # compute size of entire rom
+            rom_size = (1 << header[23]) * 1024
+            # compute number of banks
+            num_banks = rom_size/bank_size
+            print_cart_info(header)
+            set_ctrl_lines(port, False, True, False, True)
+            total_bytes_read = 0
+            # start dumping, 1 bank at a time
+            for bank in range(0, num_banks):
+                # send read section command
+                port.write(commands['READSECTION'])
+                # write bank to read from
+                port.write(chr(bank));
+                # write startAddr
+                write_addr(port, read_offset)
+                # write endAddr
+                write_addr(port, read_offset + bank_size - 1)
 
-            def printDR():
-                s = sched.scheduler(time.time, time.sleep)
-                def doPrint(sc, last_bytes_read):
-                    diff = bytes_read - last_bytes_read
-                    if diff == 0:
-                        return
-                    last_bytes_read = bytes_read
-                    sys.stdout.write("\r Dumping ROM {0:,}/{1:,} bytes  {2:,} bytes/sec".format(bytes_read, rom_size, diff))
+                bytes_read = 0;
+                # read bank data in loop
+                while bytes_read < bank_size:
+                    num_to_read = port.inWaiting()
+                    output_file.write(port.read(num_to_read))
+                    bytes_read += num_to_read
+                    total_bytes_read += num_to_read
+                    sys.stdout.write("\r Dumping ROM {0:,}/{1:,} bytes".format(total_bytes_read, rom_size))
                     sys.stdout.flush()
-
-                    sc.enter(1, 1, doPrint, (sc, last_bytes_read))
-                # do your stuff
-                s.enter(0, 1, doPrint, (s, 0))
-                s.run()
-
-            #thread.start_new_thread(printDR, ())
-
-            while rom_size > bytes_read:
-                bytes_waiting = port.inWaiting()
-                output_file.write(port.read(bytes_waiting))
-                bytes_read += bytes_waiting
-                sys.stdout.write("\r Dumping ROM {0:,}/{1:,} bytes".format(bytes_read, rom_size))
-                sys.stdout.flush()
 
             output_file.close()
             print "\n Done."
+
         elif action == "s":
             file_name = raw_input("Please enter an output filename: ")
             output_file = open(file_name, "wb")
 
-            port.write(struct.pack("B", 2)); #send the dump sram command to the arduino
-            sram_size = (1 << ord(port.read())) * 1024 #(2 to the power of port.read()) * 1024
-            bytes_read = 0;
+            header = get_header(port)
+            hirom = (header[21] & 1)
+            read_offset = 0x0 if hirom else 0x8000
+            sram_size = (1 << header[24]) * 1024
 
-            while sram_size > bytes_read:
-                output_file.write(port.read())
-                bytes_read += 1
-                sys.stdout.write("\r Dumping SRAM {0}/{1} bytes".format(bytes_read, sram_size))
+            print_cart_info(header)
+
+            # cart select is high for hirom carts, low for lorom carts when doing sram reads
+            set_ctrl_lines(port, False, True, hirom, True)
+
+            # compute bank and addresses to read from
+            bank = 0b00100000
+            start_addr = read_offset
+            if hirom:
+                start_addr |= 0b0110000000000000
+            else:
+                start_addr |= 0b01010000
+            end_addr = start_addr + sram_size - 1
+
+            # send read section command
+            port.write(commands['READSECTION'])
+            # write bank number
+            port.write(chr(bank))
+            # write startAdd
+            write_addr(port, start_addr)
+            # write endAddr
+            write_addr(port, end_addr)
+
+            bytes_read = 0;
+            # read bank data in loop
+            while bytes_read < sram_size:
+                num_to_read = port.inWaiting()
+                output_file.write(port.read(num_to_read))
+                bytes_read += num_to_read
+                sys.stdout.write("\r Dumping SRAM {0:,}/{1:,} bytes".format(bytes_read, sram_size))
                 sys.stdout.flush()
 
             output_file.close()
@@ -156,37 +171,103 @@ def main():
 
             input_file = get_input_file()
             while not input_file:
-                print "No such file. ",
-                input_file = get_input_file()
+                print "No such file."
+                continue
 
             file_size = os.fstat(input_file.fileno()).st_size
 
-            port.write(struct.pack("B", 3)); #send the write sram command to the arduino
-            sram_size = (1 << ord(port.read())) * 1024 #(2 to the power of port.read()) * 1024
+            header = get_header(port)
+            hirom = (header[21] & 1)
+            read_offset = 0x0 if hirom else 0x8000
+            sram_size = (1 << header[24]) * 1024
 
-            if file_size != sram_size:
-                print "File size does not match cartridge SRAM size."
+            print_cart_info(header)
+
+            if sram_size != file_size:
+                print "File size mismatch! File: {}, SRAM: {}".format(file_size, sram_size)
+                input_file.close()
+                continue
+
+            # cart select is high for hirom carts, low for lorom carts when doing sram writes
+            set_ctrl_lines(port, True, False, hirom, True)
+
+            # compute bank and addresses to write to
+            bank = 0b00100000
+            start_addr = read_offset
+            if hirom:
+                start_addr |= 0b0110000000000000
             else:
-                bytes_written = 0;
-                while input_file.tell() < file_size:
-                    this_byte = ord(input_file.read(1))
-                    port.write(struct.pack("B", this_byte))
-                    bytes_written += 1
-                    time.sleep(0.001) #add a small delay
-                    sys.stdout.write("\r Writing SRAM {0}/{1} bytes".format(bytes_written, sram_size))
-                    sys.stdout.flush()
-                print "\n Done."
+                start_addr |= 0b01010000
+            end_addr = start_addr + sram_size - 1
+
+            # send read section command
+            port.write(commands['WRITESECTION'])
+            # write bank number
+            port.write(chr(bank))
+            # write startAdd
+            write_addr(port, start_addr)
+            # write endAddr
+            write_addr(port, end_addr)
+
+            bytes_written = 0;
+            while input_file.tell() < file_size:
+                this_byte = input_file.read(1)
+                port.write(this_byte)
+                bytes_written += 1
+                time.sleep(0.001) #add a small delay
+                sys.stdout.write("\r Writing SRAM {0}/{1} bytes".format(bytes_written, sram_size))
+                sys.stdout.flush()
+
             input_file.close()
+            print "\n Done."
         elif action == "h":
             print_options()
         elif action == "q":
             quit = True
         else:
-            print "Invalid selection. Type \"h\" for help",
+            print "Invalid selection.",
 
     port.close()
 
-#code to handle Ctrl-c
+# read cart header in bank 0, 0xffc0 to 0xffde
+def get_header(port):
+    # write control line states
+    set_ctrl_lines(port, False, True, False, True)
+    # send read section command
+    port.write(commands['READSECTION'])
+    # write bank number
+    port.write(chr(0))
+    # write startAdd
+    write_addr(port, 0xffc0)
+    # write endAddr
+    write_addr(port, 0xffdf)
+    # read 32 byte header
+    return bytearray(port.read(32))
+
+def print_cart_info(header):
+    title = str(header[:21]).strip()
+    layout =  "HiROM" if (header[21] & 1) else "LoROM"
+    rom_size = (1 << header[23])
+    sram_size = (1 << header[24])
+    country_code = header[25]
+    country = countries[country_code] if country_code < len(countries) else str(country_code)
+    version = header[27]
+    checksum = (header[30] << 8) | header[31]
+    print " {}, {}, {} KB ROM, {} KB SRAM\n Country: {}, Version: {}, Checksum: 0x{:02X}".format(title, layout, rom_size, sram_size, country, version, checksum)
+
+# write a 16 bit address to the serial port
+def write_addr(port, addr):
+    port.write(chr(addr >> 8 & 0xff))
+    port.write(chr(addr & 0xff))
+
+# set control line states (lines are active low)
+# 4 bits of information (most to least sig): read, write, cart select, reset
+def set_ctrl_lines(port, read, write, cart, reset):
+    value = (read << 3) | (write << 2) | (cart << 1) | (reset)
+    port.write(commands['CTRL'])
+    port.write(chr(value))
+
+#code to handle SIGINT
 def sigint_handler(signum, frame):
     signal.signal(signal.SIGINT, sigint)
     if port is not None:
