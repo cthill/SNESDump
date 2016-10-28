@@ -19,6 +19,7 @@ Features:
 The firmware is written against the Arduino standard libraries and therefore requires the Arduino IDE and toolchain.
 
 The firmware is very simple. The majority of the logic for dumping the carts is implemented on the desktop side. It communicates with the desktop software over serial. The firmware has three main functions:
+
 1. `CTRL` - for setting cartridge control lines (see: [Carts](#carts))
 2. `READSECTION` - for reading chunks of ROM and SRAM
 3. `WRITESECTION` - for writing to SRAM
@@ -40,6 +41,7 @@ BOM:
 [SNES Carts](#carts)
 ----
 SNES cartridges are simple to interface with. They use a 62 pin connector and have three buses:
+
 1. `A` - 16 bit address bus
 2. `B` - 8 bit bank/page select
 3. `Data` - 8 bit data bus
