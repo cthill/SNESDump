@@ -9,9 +9,23 @@ The software allows users to backup SNES cart ROM data for archival or emulation
 
 Features:
 * Read cartridge header
-* Dump cart ROM
-* Dump cart SRAM
-* Write to cart SRAM
+* Read cart ROM
+* Read cart SRAM
+* Write cart SRAM
+
+[Game Compatibility](#compatibility)
+----
+Games that use certain enhancement chips are not compatible with this setup. Specifially, enhancement chips that sit between the console and the ROM/SRAM will not work. These chips, like the SA1, require a signal from the [Nintendo CIC](https://en.wikipedia.org/wiki/CIC_%28Nintendo%29) lockout chip to start up. No cart data can be accessed without the CIC signal. In the future, I may integrate the CIC chip in the design or emulate it in the firmware.
+
+Most games do not use enhancement chips. For a list of which games use which enhancement chips, see: [List of Super NES games that use enhancement chips](https://en.wikipedia.org/wiki/List_of_Super_NES_enhancement_chips#List_of_Super_NES_games_that_use_enhancement_chips).
+
+Confirmed incompatible:
+* SA1
+* S-DD1
+
+Confirmed compatible:
+* Super FX
+* DSP-1
 
 
 [Firmware](#firmware)
@@ -31,7 +45,7 @@ The main hardware components are an Arduino Nano microcontroller (ATmega328P bas
 
 The basic design is as follows. The A and B buses are connected to three 8 bit shift registers. The B bus occupies the most upper 8 bits. The A bus occupies the lower 16 bits. The shift registers are connected to the Arduino's hardware SPI pins. This allows for much higher data rates than controlling the registers through software. One byte can be shifted out by writing to the `SPDR` register or by calling `SPI.transfer(byte)`. The data bus is connected directly to the microcontroller, and each line is has a 10.0 kΩ pull down resistor.
 
-SNES carts have a 1.2mm card thickness and 2.50mm pin pitch. There are no off the shelf components that will work in the place of an original connector. An original cart connector can be obtained from a broken SNES console. This requires desoldering skills.
+SNES carts have a 1.2mm card thickness and 2.50mm pin pitch. There are no off the shelf components that will work in the place of an original connector. An original cart connector can be obtained from a broken SNES console. This requires desoldering skills. The cart connector [pinout is documented at the end](#pinout).
 
 Parts list:
 * 1x SNES cartidge connector
@@ -159,7 +173,7 @@ In addition to the three buses, the carts have four control lines (active low):
   </tr>
 </table>
 
-[Pinout](#pinout)
+[Cart Pinout](#pinout)
 ----
 
 Bus A is marked in light blue. Bus B is marked in dark blue. The data bus is marked in green. The control lines are orange. Power pins are marked in yellow. The gray pins are not used for this project.
