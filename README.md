@@ -27,10 +27,15 @@ The firmware is very simple. The majority of the logic for dumping the carts is 
 
 [Hardware](#hardware)
 ----
-BOM:
-* 1x SNES cartridge slot
+The main hardware components are an Arduino Nano microcontroller (ATmega328P based), three shift registers, and an original SNES cart edge connector.
+
+The basic design is as follows. The A and B buses are connected to three 8 bit shift registers. The B bus occupies the most upper 8 bits. The A bus occupies the lower 16 bits. The shift registers are connected to the Arduino's hardware SPI pins. This allows for much higher data rates than controlling the registers through software. One byte can be shifted out by writing to the `SPDR` register or by calling `SPI.transfer(byte)`. The data bus is connected directly to the microcontroller, and each line is has a 10.0 kΩ pull down resistor.
+
+SNES carts have a 1.2mm card thickness and 2.50mm pin pitch. There are no off the shelf components that will work in the place of an original connector. An original cart connector can be obtained from a broken SNES console. This requires desoldering skills.
+
+Parts list:
+* 1x SNES cartidge connector
 * 1x Arduino or AVR compatible micro controller
- * Can be desoldered from a broken console
 * 8x 10.0 kΩ resistors
 * 3x 74HC595 shift registers
 * Wire for connecting address bus, data bus, and control lines
@@ -40,17 +45,15 @@ BOM:
 
 [SNES Carts](#carts)
 ----
-SNES cartridges are simple to interface with. They use a 62 pin connector and have three buses:
+SNES cartridges use a 62 pin edge connector and have three buses:
 
 1. `A` - 16 bit address bus
 2. `B` - 8 bit bank/page select
-3. `Data` - 8 bit data bus
+3. `Data` - 8 bit bi-directional data bus
 
-Addresses are written the the following format: `$BB:AAAA`, where 'BB' is an 8 bit hex value corresponding to bus B, and 'AAAA' is a 16 bit hex value corresponding to bus A. For example: `$00:7FFF`
+Full addresses are notated the the following format: `$BB:AAAA`, where 'BB' is an 8 bit hex value corresponding to the value on bus B, and 'AAAA' is a 16 bit hex value corresponding to the value on bus A. For example: `$00:7FFF`.
 
-There are two cart layouts: HiROM and LoROM. LoROM carts have 32KB pages (A15 is not used, pull high). HiROM carts have 64KB pages.
-
-Information about the cartridge (layout, SRAM size, number of banks, title, country code, checksum, etc) is found in the cart header. The header is 32 bytes of data located at `$00:FFC0`. The lowest bit of the ROM makeup field indicates the layout (0 == LoROM, 1 == HiROM).
+Information about the cartridge is found in the cart header. The header is 32 bytes of data located at `$00:FFC0`. When interfacing with a cart, you must first read the header to determine the layout, ROM size, SRAM size, number of banks, etc.
 
 <table>
   <tr>
@@ -110,7 +113,23 @@ Information about the cartridge (layout, SRAM size, number of banks, title, coun
   </tr>
 </table>
 
-The carts have four control lines (active low):
+There are two cart layouts: HiROM and LoROM. The lowest bit of the ROM makeup field indicates the layout (0 == LoROM, 1 == HiROM).
+
+LoROM carts have page 32KB pages. A15 is not used and usually internally disconnected. `$0000` to `$7FFF` is a mirror of `$8000` to `$FFFF`. Pull A15 high when reading LoROM carts. HiROM carts have 64KB pages. All 16 lines of bus A are used.
+
+Reading ROM (# of banks can be calculated from data in cart header):
+* `LoROM`: Read all banks, from address $8000-$FFFF
+* `HiROM`: Read all banks, from address $0000-$FFFF
+
+Reading SRAM (size of SRAM in cart header):
+* `LoROM`: Read from $30:8000 on
+* `HiROM`: Read from $20:6000 on
+
+Writing SRAM (size of SRAM in cart header):
+* `LoROM`: Write from $30:8000 on
+* `HiROM`: Write from $20:6000 on
+
+In addition to the three buses, the carts have four control lines (active low):
 * `RD` - Read. Pull low when reading data.
 * `WR` - Write. Pull low when writing data.
 * `CS` - Cart select.
@@ -140,17 +159,9 @@ The carts have four control lines (active low):
   </tr>
 </table>
 
-Reading ROM (# of banks can be calculated from data in cart header):
-* `LoROM`: Read all banks, from address $8000-$FFFF
-* `HiROM`: Read all banks, from address $0000-$FFFF
+[Pinout](#pinout)
+----
 
-Reading SRAM (size of SRAM in cart header):
-* LoROM: Read from $30:8000 on
-* HiROM: Read from $20:6000 on
+Bus A is marked in light blue. Bus B is marked in dark blue. The data bus is marked in green. The control lines are orange. Power pins are marked in yellow. The gray pins are not used for this project.
 
-Writing SRAM (size of SRAM in cart header):
-* LoROM: Write from $30:8000 on
-* HiROM: Write from $20:6000 on
-
-
-![Cart pinout](/images/pinout.png)
+<img src="/images/pinout.png" width="350"/>
