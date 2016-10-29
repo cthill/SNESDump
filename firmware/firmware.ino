@@ -2,10 +2,10 @@
 
 const int AddressLatchPin = 10;
 
-const int snesCartPin = A4; //Cart pin 49 - aka /CS, /ROMSEL, /Cart - Goes low when reading ROM
-const int snesReadPin = A3; //Cart pin 23 - aka /RD - Address bus read
+const int snesReadPin = A1; //Cart pin 23 - aka /RD - Address bus read
 const int snesWritePin = A2; //Cart pin 54 - aka /WR - Address bus write
-const int snesResetPin = A1; //Cart pin 26 - SNES reset pin. Goes high when reading cart
+const int snesCartPin = A3; //Cart pin 49 - aka /CS, /ROMSEL, /Cart - Goes low when reading ROM
+const int snesResetPin = A4; //Cart pin 26 - SNES reset pin. Goes high when reading cart
 
 typedef enum COMMANDS {
   CTRL,
@@ -23,7 +23,7 @@ void setup() {
   //begin spi
   SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV2); //8MHz
-  
+
   setDataBusDir(INPUT);
 
   //setup cart control pins
@@ -36,7 +36,7 @@ void setup() {
   //readHeader();
 
   //Write byte to indicate device ready
-  Serial.write(0x00); 
+  Serial.write(0x00);
 }
 
 void loop() {
@@ -48,7 +48,7 @@ void loop() {
       setCtrlLines(serialReadBlocking());
     }
     break;
-    
+
     // read a section of data from the cart
     case READSECTION:
     {
@@ -67,7 +67,7 @@ void loop() {
         Serial.write(readDataBus());
 
         /* We must break out of the loop this way because of the potential case
-         * where addresses 0x0000 - 0xffff (inclusive) must be used. A standard 
+         * where addresses 0x0000 - 0xffff (inclusive) must be used. A standard
          * loop won't work because it will overflow the 16 bit unsigned int.
          */
         if (addr == endAddr) {
@@ -78,7 +78,7 @@ void loop() {
       Serial.flush();
     }
     break;
-    
+
     case WRITESECTION:
     {
       byte bank = serialReadBlocking();
@@ -90,13 +90,13 @@ void loop() {
       unsigned int addr = bytesToInt(startAddrHi, startAddrLow);
       unsigned int endAddr = bytesToInt(endAddrHi, endAddrLow);
       setDataBusDir(OUTPUT);
-  
+
       while (true) {
         writeAddrBus(bank, addr);
         writeDataBus(serialReadBlocking());
 
         /* We must break out of the loop this way because of the potential case
-         * where addresses 0x0000 - 0xffff (inclusive) must be used. A standard 
+         * where addresses 0x0000 - 0xffff (inclusive) must be used. A standard
          * loop won't work because it will overflow the 16 bit unsigned int.
          */
         if (addr == endAddr) {
@@ -156,7 +156,7 @@ void writeDataBus(byte data) {
 }
 
 //Set the data bus to output or input
-// false => INPUT, true => OUTPUT 
+// false => INPUT, true => OUTPUT
 void setDataBusDir(bool dir) {
   for (int p = 2; p <=9; p++){
     pinMode(p, dir);
