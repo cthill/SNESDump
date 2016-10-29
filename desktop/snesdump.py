@@ -104,9 +104,8 @@ def main():
                 port.write(commands['READSECTION'])
                 # write bank to read from
                 port.write(chr(bank));
-                # write startAddr
+                # write start and end addresses
                 write_addr(port, read_offset)
-                # write endAddr
                 write_addr(port, read_offset + bank_size - 1)
 
                 bytes_read = 0;
