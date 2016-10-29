@@ -55,7 +55,7 @@ Parts list:
 * Wire for connecting address bus, data bus, and control lines
  * A good source of wire for projects like this is old PATA cables
 
-![Circuit diagram](/images/circuit.png)
+<img src="/images/circuit.png" width="600"/>
 
 [SNES Carts](#carts)
 ----
