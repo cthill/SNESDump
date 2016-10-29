@@ -75,26 +75,30 @@ def main():
     while not quit:
         action = raw_input("Please select an action: ").lower()
         if action == "i":
-            print_cart_info(get_header(port))
+            header = get_header(port)
+            if not verify_header(header):
+                print "Error reading cart!"
+                continue
+            print_cart_info(header)
 
         elif action == "d":
+            header = get_header(port)
+            if not verify_header(header):
+                print "Error reading cart!"
+                continue
+            print_cart_info(header)
+
             file_name = raw_input("Please enter an output filename: ")
             output_file = open(file_name, "wb")
 
-            header = get_header(port)
             hirom = (header[21] & 1)
-            # lorom carts are read from 0x8000 to 0xffff
             read_offset = 0x0 if hirom else 0x8000
-            # lorom banks are 0x8000 in size
-            bank_size = 0x10000 - read_offset
-            # compute size of entire rom
+            bank_size = 0x10000 if hirom else 0x8000
             rom_size = (1 << header[23]) * 1024
-            # compute number of banks
             num_banks = rom_size/bank_size
-            print_cart_info(header)
+
             set_ctrl_lines(port, False, True, False, True)
             total_bytes_read = 0
-            # start dumping, 1 bank at a time
             for bank in range(0, num_banks):
                 # send read section command
                 port.write(commands['READSECTION'])
@@ -119,16 +123,20 @@ def main():
             print "\n Done."
 
         elif action == "s":
+            header = get_header(port)
+            if not verify_header(header):
+                print "Error reading cart!"
+                continue
+            hirom = (header[21] & 1)
+            sram_size = header[24] * 2048
+            print_cart_info(header)
+            if sram_size == 0:
+                print "Error! Game has no SRAM!"
+                continue
+
             file_name = raw_input("Please enter an output filename: ")
             output_file = open(file_name, "wb")
 
-            header = get_header(port)
-            hirom = (header[21] & 1)
-            sram_size = (1 << header[24]) * 1024
-
-            print_cart_info(header)
-
-            # cart select is high for hirom carts, low for lorom carts when doing sram reads
             set_ctrl_lines(port, False, True, hirom, True)
 
             # compute bank and addresses to write to
@@ -140,13 +148,11 @@ def main():
                 start_addr = 0x8000
             end_addr = start_addr + sram_size - 1
 
-            # send read section command
             port.write(commands['READSECTION'])
             # write bank number
             port.write(chr(bank))
-            # write startAdd
+            # write start and end addresses
             write_addr(port, start_addr)
-            # write endAddr
             write_addr(port, end_addr)
 
             bytes_read = 0;
@@ -161,6 +167,17 @@ def main():
             output_file.close()
             print "\n Done."
         elif action == "w":
+            header = get_header(port)
+            if not verify_header(header):
+                print "Error reading cart!"
+                continue
+            hirom = (header[21] & 1)
+            sram_size = header[24] * 2048
+            print_cart_info(header)
+            if sram_size == 0:
+                print "Error! Game has no SRAM!"
+                continue
+
             def get_input_file():
                 try:
                     file_name = raw_input("Please enter an input filename: ")
@@ -172,21 +189,13 @@ def main():
             while not input_file:
                 print "No such file."
                 continue
-
             file_size = os.fstat(input_file.fileno()).st_size
-
-            header = get_header(port)
-            hirom = (header[21] & 1)
-            sram_size = (1 << header[24]) * 1024
-
-            print_cart_info(header)
 
             if sram_size != file_size:
                 print "File size mismatch! File: {}, SRAM: {}".format(file_size, sram_size)
                 input_file.close()
                 continue
 
-            # cart select is high for hirom carts, low for lorom carts when doing sram writes
             set_ctrl_lines(port, True, False, hirom, True)
 
             # compute bank and addresses to write to
@@ -198,13 +207,11 @@ def main():
                 start_addr = 0x8000
             end_addr = start_addr + sram_size - 1
 
-            # send read section command
             port.write(commands['WRITESECTION'])
             # write bank number
             port.write(chr(bank))
-            # write startAdd
+            # write start and end addresses
             write_addr(port, start_addr)
-            # write endAddr
             write_addr(port, end_addr)
 
             bytes_written = 0;
@@ -229,24 +236,26 @@ def main():
 
 # read cart header in bank 0, 0xffc0 to 0xffde
 def get_header(port):
-    # write control line states
     set_ctrl_lines(port, False, True, False, True)
-    # send read section command
     port.write(commands['READSECTION'])
     # write bank number
     port.write(chr(0))
-    # write startAdd
+    #write start and end addresses
     write_addr(port, 0xffc0)
-    # write endAddr
     write_addr(port, 0xffdf)
     # read 32 byte header
-    return bytearray(port.read(32))
+    data = port.read(32)
+    return bytearray(data)
+
+def verify_header(header):
+    return not all(v == 0 for v in header)
 
 def print_cart_info(header):
     title = str(header[:21]).strip()
     layout =  "HiROM" if (header[21] & 1) else "LoROM"
     rom_size = (1 << header[23])
-    sram_size = (1 << header[24])
+    #sram_size = (1 << header[24])
+    sram_size = header[24] * 2048
     country_code = header[25]
     country = countries[country_code] if country_code < len(countries) else str(country_code)
     version = header[27]

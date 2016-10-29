@@ -45,7 +45,7 @@ The main hardware components are an Arduino Nano microcontroller (ATmega328P bas
 
 The basic design is as follows. The A and B buses are connected to three 8 bit shift registers. The B bus occupies the most upper 8 bits. The A bus occupies the lower 16 bits. The shift registers are connected to the Arduino's hardware SPI pins. This allows for much higher data rates than controlling the registers through software. One byte can be shifted out by writing to the `SPDR` register or by calling `SPI.transfer(byte)`. The data bus is connected directly to the microcontroller, and each line is has a 10.0 kΩ pull down resistor.
 
-SNES carts have a 1.2mm card thickness and 2.50mm pin pitch. There are no off the shelf components that will work in the place of an original connector. An original cart connector can be obtained from a broken SNES console. This requires desoldering skills. The cart connector [pinout is documented at the end](#pinout).
+SNES carts have a 1.2mm card thickness and 2.50mm pin pitch. I do not know of any off the shelf components that will work in the place of an original connector. An original cart connector can be obtained from a broken SNES console. This requires desoldering skills. The cart connector [pinout is documented at the end](#pinout).
 
 Parts list:
 * 1x SNES cartidge connector
