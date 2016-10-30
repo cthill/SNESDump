@@ -1,8 +1,7 @@
 # SNES Dump
 Arduino powered interface for Super Nintendo Entertainment System game carts. A poor man's alternative to the [retrode](http://www.retrode.org/).
 
-[Desktop Software](#desktop)
------
+## Desktop Software
 The desktop software is written in python and provides an interactive text-based interface for reading and writing to carts. It has been tested on macOS and Linux.
 
 The software allows users to backup SNES cart ROM data for archival or emulation purposes. It also allows users to transfer save game data between real SNES hardware and emulation software.
