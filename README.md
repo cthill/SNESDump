@@ -13,8 +13,7 @@ Features:
 * Read cart SRAM
 * Write cart SRAM
 
-[Game Compatibility](#compatibility)
-----
+## Game Compatibility
 Games that use certain enhancement chips are not compatible with this setup. Specifially, enhancement chips that sit between the console and the ROM/SRAM will not work. These chips, like the SA1, require a signal from the [Nintendo CIC](https://en.wikipedia.org/wiki/CIC_%28Nintendo%29) lockout chip to start up. No cart data can be accessed without the CIC signal. In the future, I may integrate the CIC chip in the design or emulate it in the firmware.
 
 Most games do not use enhancement chips. For a list of which games use which enhancement chips, see: [List of Super NES games that use enhancement chips](https://en.wikipedia.org/wiki/List_of_Super_NES_enhancement_chips#List_of_Super_NES_games_that_use_enhancement_chips).
@@ -28,19 +27,17 @@ Confirmed compatible:
 * DSP-1
 
 
-[Firmware](#firmware)
-----
+## Firmware
 The firmware is written against the Arduino standard libraries and therefore requires the Arduino IDE and toolchain.
 
 The firmware is very simple. The majority of the logic for dumping the carts is implemented on the desktop side. It communicates with the desktop software over serial. The firmware has three main functions:
 
-1. `CTRL` - for setting cartridge control lines (see: [Carts](#carts))
+1. `CTRL` - for setting cartridge control lines
 2. `READSECTION` - for reading chunks of ROM and SRAM
 3. `WRITESECTION` - for writing to SRAM
 
 
-[Hardware](#hardware)
-----
+## Hardware
 The main hardware components are an Arduino Nano microcontroller (ATmega328P based), three shift registers, and an original SNES cart edge connector.
 
 The basic design is as follows. The A and B buses are connected to three 8 bit shift registers. The B bus occupies the most upper 8 bits. The A bus occupies the lower 16 bits. The shift registers are connected to the Arduino's hardware SPI pins. This allows for much higher data rates than controlling the registers through software. One byte can be shifted out by writing to the `SPDR` register or by calling `SPI.transfer(byte)`. The data bus is connected directly to the microcontroller, and each line is has a 10.0 kΩ pull down resistor.
@@ -59,8 +56,7 @@ Circuit:
 
 <img src="/images/circuit.png" width="600"/>
 
-[SNES Carts](#carts)
-----
+## SNES Carts
 SNES cartridges use a 62 pin edge connector and have three buses:
 
 1. `A` - 16 bit address bus
@@ -175,9 +171,7 @@ In addition to the three buses, the carts have four control lines (active low):
   </tr>
 </table>
 
-[Cart Pinout](#pinout)
-----
-
+## Cart Pinout
 Bus A is marked in light blue. Bus B is marked in dark blue. The data bus is marked in green. The control lines are orange. Power pins are marked in yellow. The gray pins are not used for this project.
 
 <img src="/images/pinout.png" width="350"/>
