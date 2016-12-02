@@ -1,16 +1,16 @@
 # SNES Dump
-Arduino powered interface for Super Nintendo Entertainment System game carts. A poor man's alternative to the [retrode](http://www.retrode.org/).
-
-## Desktop Software
-The desktop software is written in python and provides an interactive text-based interface for reading and writing to carts. It has been tested on macOS and Linux.
-
-The software allows users to backup SNES cart ROM data for archival or emulation purposes. It also allows users to transfer save game data between real SNES hardware and emulation software.
+Arduino powered interface for Super Nintendo Entertainment System game carts. A DIY alternative to the [retrode](http://www.retrode.org/).
 
 Features:
-* Read cartridge header
-* Read cart ROM
-* Read cart SRAM
-* Write cart SRAM
+* Read cart info from header
+* Dump cart ROM
+* Backup cart SRAM
+* Restore cart SRAM
+
+
+## Desktop Software
+The desktop software is written in python and provides an interactive text-based interface for reading and writing to carts. It communicates with the Arduino using the built in USB to serial converter. It has been tested on macOS and Linux.
+
 
 ## Game Compatibility
 Games that use certain enhancement chips are not compatible with this setup. Specifially, enhancement chips that sit between the console and the ROM/SRAM will not work. These chips, like the SA1, require a signal from the [Nintendo CIC](https://en.wikipedia.org/wiki/CIC_%28Nintendo%29) lockout chip to start up. No cart data can be accessed without the CIC signal. In the future, I may integrate the CIC chip in the design or emulate it in the firmware.
