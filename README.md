@@ -8,12 +8,8 @@ Features:
 * Restore cart SRAM
 
 
-## Desktop Software
-The desktop software is written in python and provides an interactive text-based interface for reading and writing to carts. It communicates with the Arduino using the built in USB to serial converter. It has been tested on macOS and Linux.
-
-
 ## Game Compatibility
-Games that use certain enhancement chips are not compatible with this setup. Specifially, enhancement chips that sit between the console and the ROM/SRAM will not work. These chips, like the SA1, require a signal from the [Nintendo CIC](https://en.wikipedia.org/wiki/CIC_%28Nintendo%29) lockout chip to start up. No cart data can be accessed without the CIC signal. In the future, I may integrate the CIC chip in the design or emulate it in the firmware.
+Games that use certain enhancement chips are not compatible with this setup. Specifically, enhancement chips that sit between the console and the ROM/SRAM will not work. These chips, like the SA1, require a signal from the [Nintendo CIC](https://en.wikipedia.org/wiki/CIC_%28Nintendo%29) lockout chip to start up. No cart data can be accessed without the CIC signal. In the future, I may integrate the CIC chip in the design or emulate it in the firmware.
 
 Most games do not use enhancement chips. For a list of which games use which enhancement chips, see: [List of Super NES games that use enhancement chips](https://en.wikipedia.org/wiki/List_of_Super_NES_enhancement_chips#List_of_Super_NES_games_that_use_enhancement_chips).
 
@@ -24,6 +20,10 @@ Confirmed incompatible:
 Confirmed compatible:
 * Super FX
 * DSP-1
+
+
+## Desktop Software
+The desktop software is written in python and provides an interactive text-based interface for reading and writing to carts. It communicates with the Arduino using the built in USB to serial converter. It has been tested on macOS and Linux.
 
 
 ## Firmware
@@ -43,9 +43,11 @@ The basic design is as follows. The A and B buses are connected to three 8 bit s
 
 SNES carts have a 1.2mm card thickness and 2.50mm pin pitch. I do not know of any off the shelf components that will work in the place of an original connector. An original cart connector can be obtained from a broken SNES console. This requires desoldering skills. The cart connector [pinout is documented at the end](#pinout).
 
+Be sure to use an Arduino board with a legitimate FTDI USB to serial converter chip. Some clone chips have issues with higher baud rates. If you are having issues with an Arduino board that does not have an FTDI chip, try lowering the baud rate.
+
 Parts list:
-* 1x SNES cartidge connector
-* 1x Arduino or AVR compatible micro controller
+* 1x SNES cartridge connector
+* 1x Arduino or AVR compatible micro controller (FTDI USB to serial converter recommended)
 * 8x 10.0 kΩ resistors
 * 3x 74HC595 shift registers
 * Wire for connecting address bus, data bus, and control lines
