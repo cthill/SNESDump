@@ -23,7 +23,7 @@ Confirmed compatible:
 
 
 ## Desktop Software
-The desktop software is written in python and provides an interactive text-based interface for reading and writing to carts. It communicates with the Arduino using the built in USB to serial converter. It has been tested on macOS and Linux.
+The desktop software is written in Python (2.x) and provides an interactive text-based interface for reading and writing to carts. It communicates with the Arduino using the built in USB to serial converter. It has been tested on macOS and Linux.
 
 
 ## Firmware
